@@ -1,6 +1,5 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home } from '../screens/Home';
 import { MyCars } from '../screens/MyCars';
 import { AppStackRoutes } from './app.stack.routes';
 
@@ -9,6 +8,7 @@ import CarSVG from '../assets/svg/car.svg';
 import HomeSVG from '../assets/svg/home.svg';
 import { useTheme } from 'styled-components';
 import { Platform } from 'react-native';
+import { Profile } from '../screens/Profile';
 
 const Tab = createBottomTabNavigator();
 
@@ -43,11 +43,11 @@ export function AppTabRoutes() {
         }}
       />
       <Tab.Screen 
-        name="Profile" 
-        component={Home} 
+        name="MyCars" 
+        component={MyCars} 
         options={{
           tabBarIcon: (({ color }) => (
-            <ProfileSVG 
+            <CarSVG 
               width={24} 
               height={24} 
               fill={color}
@@ -56,11 +56,11 @@ export function AppTabRoutes() {
         }}
       />
       <Tab.Screen 
-        name="MyCars" 
-        component={MyCars} 
+        name="Profile" 
+        component={Profile} 
         options={{
           tabBarIcon: (({ color }) => (
-            <CarSVG 
+            <ProfileSVG 
               width={24} 
               height={24} 
               fill={color}

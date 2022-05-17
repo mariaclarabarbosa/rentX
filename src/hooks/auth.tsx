@@ -5,7 +5,6 @@ import React, {
    ReactNode,
    useEffect,
 } from 'react';
-import { Alert } from 'react-native';
 import { api } from '../services/api';
 import { database } from '../database';
 import { User as ModelUser } from '../database/model/User';
@@ -32,6 +31,7 @@ interface AuthProviderProps {
 interface AuthContextData {
    user: User;
    signIn: (credential: SignInCredentials) => Promise<void>;
+   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -49,7 +49,7 @@ function AuthProvider({ children }: AuthProviderProps) {
          api.defaults.headers.Authorization = `Bearer ${token}`;
 
          const usersCollection = database.get<ModelUser>('users');
-         const newUser = usersCollection.create(newUser => {
+         usersCollection.create((newUser: ModelUser) => {
             newUser.user_id = user.user_id;
             newUser.name = user.name;
             newUser.email = user.email;
@@ -61,6 +61,20 @@ function AuthProvider({ children }: AuthProviderProps) {
          setData({ ...user, token});
       } catch (error) {
          throw new Error(error);
+      }
+   }
+
+   async function signOut() {
+      try {
+         const user = await database.get<ModelUser>('users').find(data.id);
+         await user.destroyPermanently();
+
+         delete api.defaults.headers.Authorization;
+
+         setData({} as User);
+      } catch (error) {
+         throw new Error(error);
+         
       }
    }
 
@@ -83,6 +97,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       <AuthContext.Provider value={{
          user: data,
          signIn,
+         signOut,
       }}>
          {children}
       </AuthContext.Provider>
