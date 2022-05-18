@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Animated, {
     useSharedValue,
     useAnimatedScrollHandler,
@@ -24,23 +24,31 @@ import {
     About,
     Accessories,
     Footer,
+    OfflineInfo,
 } from './styles';
 import { Button } from '../../components/Button';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { CarDTO } from '../../dtos/CarDTO';
+import { Car as ModelCar } from '../../database/model/Car';
 import { getAccessoryIcon } from '../../utils/getAccessoryIcon';
 import { getStatusBarHeight } from 'react-native-iphone-x-helper';
 import { useTheme } from 'styled-components/native';
+import { api } from '../../services/api';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { LoadAnimation } from '../../components/LoadAnimation';
 
 interface Params {
-    car: CarDTO;
+    car: ModelCar;
 }
 
 export function CarDatails() {
+    const [carUpdate, setCarUpdate] = useState<CarDTO>({} as CarDTO);
+    const [loading, setLoading] = useState(true);
     const navigation = useNavigation();
     const route = useRoute();
     const theme = useTheme();
     const { car } = route.params as Params;
+    const netInfo = useNetInfo();
 
     const scrollY = useSharedValue(0);
     const scrollHendler = useAnimatedScrollHandler(event => {
@@ -70,8 +78,27 @@ export function CarDatails() {
     });
 
     function handleScheduling() {
-        navigation.navigate('Scheduling', { car });
+        navigation.navigate('Scheduling', { car: carUpdate });
     };
+
+    useEffect(() => {
+        async function fetchOnlineData() {
+          try {
+            const response = await api.get(`cars/${car.id}`);
+            setCarUpdate(response.data);
+          } catch (error) {
+            console.log(error)
+          } finally {
+            setLoading(false);
+          }
+        }
+    
+        fetchOnlineData();
+      },[netInfo.isConnected]);
+
+    if (loading) {
+        return <LoadAnimation />;
+    }
 
     return (
         <Container>
@@ -82,7 +109,10 @@ export function CarDatails() {
                 <Animated.View style={sliderCarsStyleAnimation}>
                     <CarImages>
                         <ImageSlider
-                            imagesUrl={car.photos}
+                            imagesUrl={
+                                !!carUpdate.photos ? 
+                                carUpdate.photos : [{ id: car.thumbnail, photo: car.thumbnail }]
+                            }
                         />
                     </CarImages>
                 </Animated.View>
@@ -105,19 +135,20 @@ export function CarDatails() {
                     </Description>
                     <Rent>
                         <Period>{car.period}</Period>
-                        <Price>R$ {car.price}</Price>
+                        <Price>R$ {netInfo.isConnected === true ? car.price : '...'}</Price>
                     </Rent>
                 </Details>
 
                 <Accessories>
                     {
-                        car.accessories.map(accessory => (
+                        carUpdate.accessories ?
+                        carUpdate.accessories.map(accessory => (
                             <Accessory
                                 key={accessory.type}
                                 name={accessory.name}
                                 icon={getAccessoryIcon(accessory.type)}
                             />
-                        ))
+                        )) : null
                     }
                 </Accessories>
 
@@ -130,7 +161,14 @@ export function CarDatails() {
                 <Button 
                     title='Escolher período do aluguel' 
                     onPress={handleScheduling}
+                    disabled={netInfo.isConnected === false}
                 />
+                {
+                    netInfo.isConnected === false &&
+                    <OfflineInfo>
+                        Conecte-se a internet para ver mais detalhes e dar prosseguimento ao agendamento.
+                    </OfflineInfo>
+                }
             </Footer>
 
         </Container>
