@@ -101,4 +101,6 @@ export const OptionTitle = styled.Text<OptionProps>`
    };
 `;
 
-export const Section = styled.View``;
+export const Section = styled.View`
+   margin-bottom: 30px;
+`;

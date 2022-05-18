@@ -21,6 +21,7 @@ import {
    Section,
 } from './styles';
 import { 
+   Alert,
    Keyboard, 
    KeyboardAvoidingView, 
    StatusBar, 
@@ -29,12 +30,14 @@ import {
 import { Input } from '../../components/Input';
 import { PasswordInput } from '../../components/PasswordInput';
 import { useAuth } from '../../hooks/auth';
+import { Button } from '../../components/Button';
+import * as Yup from 'yup';
 
 export function Profile(){
-   const { user, signOut } = useAuth();
+   const { user, signOut, updateUser } = useAuth();
    const [option, setOption] = useState<'dataEdit' | 'passwordEdit'>('dataEdit');
-   const [name, setName] = useState('');
-   const [driverLicense, setDriverLicense] = useState('');
+   const [name, setName] = useState(user.name);
+   const [driverLicense, setDriverLicense] = useState(user.driver_license);
    const [password, setPassword] = useState('');
    const [confirmPassword, setConfirmPassword] = useState('');
    const [avatar, setAvatar] = useState(user.avatar);
@@ -57,6 +60,50 @@ export function Profile(){
       }
    }
 
+   async function handleProfileUpdate() {
+      try {
+         const schema = Yup.object().shape({
+            driverLicense: Yup.string().required('CNH é obrigatória'),
+            name: Yup.string().required('Nome é obrigatório'),
+         });
+         const data = { name, driverLicense };
+         await schema.validate(data);
+         await updateUser({
+            id: user.id,
+            avatar,
+            name,
+            driver_license: driverLicense,
+            email: user.email,
+            user_id: user.user_id,
+            token: user.token,
+         });
+         Alert.alert('Perfil Atualizado!');
+      } catch (error){
+         if (error instanceof Yup.ValidationError) {
+            return Alert.alert('Opa!', error.message);
+         }
+         return Alert.alert('Não foi possível atualizar o perfil.')
+      }
+   }
+
+   async function handleSignOut() {
+      Alert.alert(
+         'Tem certeza?',
+         'Se você sair, irá precisar de internet para conectar-se novamente.',
+         [
+            {
+               text: 'Cancelar',
+               onPress: () => {},
+               style: 'cancel'
+            },
+            {
+               text: 'Sair',
+               onPress: () => signOut(),
+            },
+         ]
+      );
+   }
+
    return (
       <KeyboardAvoidingView behavior='position' enabled>
          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -70,7 +117,7 @@ export function Profile(){
                   <HeaderTop>
                      <BackButton color={theme.colors.shape} />
                      <HeaderTitle>Editar Perfil</HeaderTitle>
-                     <LogoutButton onPress={signOut} >
+                     <LogoutButton onPress={handleSignOut} >
                         <Feather
                            name='power'
                            size={24}
@@ -163,6 +210,10 @@ export function Profile(){
                         </Section>
                      )
                   }
+                  <Button 
+                     title='Salvar Alterações'
+                     onPress={handleProfileUpdate}
+                  />
                </Content>
             </Container>
          </TouchableWithoutFeedback>
