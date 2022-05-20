@@ -39,6 +39,7 @@ import { getAccessoryIcon } from '../../utils/getAccessoryIcon';
 import { api } from '../../services/api';
 import { format } from 'date-fns';
 import { getPlatformDate } from '../../utils/getPlatformDate';
+import { useAuth } from '../../hooks/auth';
 
 interface Params {
     car: CarDTO;
@@ -57,34 +58,28 @@ export function SchedulingDetails(){
     const navigation = useNavigation();
     const route = useRoute();
     const { car, dates } = route.params as Params;
+    const { user } = useAuth();
 
     const rentTotal = Number(dates.length * car.price);
 
     async function handleConfirmRental() {
         try {
             setLoading(true);
-            const schedulesByCar = await api.get(`/schedules_bycars/${car.id}`);
-            const unavailable_dates = [
-                ...schedulesByCar.data.unavailable_dates,
-                ...dates,
-            ];
-            await api.put(`/schedules_bycars/${car.id}`, {
-                id: car.id,
-                unavailable_dates,
+           
+            await api.post('/rentals', {
+                user_id: user.user_id,
+                car_id: car.id,
+                start_date: new Date(dates[0]),
+                end_date: new Date(dates[dates.length - 1]),
+                total: rentTotal,
             });
-            await api.post('schedules_byuser', {
-                user_id: 1,
-                car,
-                startDate: format(getPlatformDate(new Date(dates[0])), 'dd/MM/yyyy'),
-                endDate: format(getPlatformDate(new Date(dates[dates.length - 1])), 'dd/MM/yyyy'),
-            });
+
             navigation.navigate('Confirmation', {
                 title: 'Carro Alugado!',
                 message: `Agora você só precisa ir\naté a concessionária da RENTX\npegar o seu automóvel.`,
                 nextScreenRoute: 'Home'
             });
         } catch (error) {
-            console.log(error)
             Alert.alert('Não foi possível confirmar o agendamento.')
         } finally {
             setLoading(false);
